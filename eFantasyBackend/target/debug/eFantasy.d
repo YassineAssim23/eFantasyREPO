@@ -1,0 +1,1 @@
+C:\Users\Yassine\Documents\MessingAround\eFantasyProject\eFantasyREPO\eFantasyBackend\target\debug\eFantasy.exe: C:\Users\Yassine\Documents\MessingAround\eFantasyProject\eFantasyREPO\eFantasyBackend\src\main.rs
