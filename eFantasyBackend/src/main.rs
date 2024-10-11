@@ -3,6 +3,7 @@
 use sqlx::postgres::PgPool;
 use dotenv::dotenv;
 use reqwest::Client;
+use mongodb::{Client as MongoClient, options::ClientOptions};
 
 mod models;
 mod handlers;
@@ -12,6 +13,7 @@ pub struct AppState {
     pub db: PgPool,
     pub supabase_client: Client,
     pub supabase_api_key: String,
+    pub mongo_db: mongodb::Database,
 }
 
 #[get("/")]
@@ -28,6 +30,20 @@ async fn rocket() -> _ {
     let supabase_api_key = std::env::var("SUPABASE_API_KEY")
         .expect("SUPABASE_API_KEY must be set");
 
+    //mongoDB
+    let mongo_uri = std::env::var("MONGODB_URI").expect("Set env var");
+
+    println!("Attempting to connect to MongoDB...");
+    let mongo_options = ClientOptions::parse(&mongo_uri)
+        .await
+        .expect("Failed to parse MongoDB options");
+
+    let mongo_client = MongoClient::with_options(mongo_options)
+        .expect("Failed to create MongoDB client");
+    let mongo_db = mongo_client.database("your_database_name");
+    println!("MongoDB connection successful!");
+
+
     println!("Attempting to connect to database...");
     let pool = PgPool::connect(&database_url)
         .await
@@ -42,6 +58,7 @@ async fn rocket() -> _ {
         db: pool,
         supabase_client,
         supabase_api_key,
+        mongo_db,
     };
 
     rocket::build()
