@@ -44,7 +44,7 @@ async fn rocket() -> _ {
     println!("MongoDB connection successful!");
 
 
-    println!("Attempting to connect to database...");
+    println!("Attempting to connect to Postgres database...");
     let pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to create pool");
