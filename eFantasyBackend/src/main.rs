@@ -1,111 +1,122 @@
-// This line allows us to use Rocket's macros throughout our code
 #[macro_use] extern crate rocket;
 
-// Import necessary dependencies
-use sqlx::postgres::PgPool;  // For PostgreSQL database connection
-use dotenv::dotenv;  // For loading environment variables
-use reqwest::Client;  // For making HTTP requests (used with Supabase)
-use mongodb::{Client as MongoClient, options::ClientOptions};  // For MongoDB connection
+use sqlx::postgres::PgPool;
+use dotenv::dotenv;
+use reqwest::Client;
+use mongodb::{Client as MongoClient, options::ClientOptions};
 
-// Import local modules
 mod models;
 mod handlers;
 mod db;
+use crate::handlers::user::{register, get_user, delete_user};
 
-// Define the main application state
-// This struct holds all shared resources that our web server will use
+/// Main application state
+/// 
+/// This struct holds all shared resources that our web server will use.
+/// 
+/// Fields:
+/// - db: PostgreSQL connection pool for database operations
+/// - supabase_client: HTTP client for making requests to Supabase
+/// - supabase_api_key: API key for authenticating with Supabase
+/// - mongo_db: MongoDB database connection
 pub struct AppState {
-    pub db: PgPool,  // PostgreSQL connection pool
-    pub supabase_client: Client,  // HTTP client for Supabase
-    pub supabase_api_key: String,  // API key for Supabase
-    pub mongo_db: mongodb::Database,  // MongoDB database connection
+    pub db: PgPool,
+    pub supabase_client: Client,
+    pub supabase_api_key: String,
+    pub mongo_db: mongodb::Database,
 }
 
-// Define the root route of our web server
-// This function will be called when a GET request is made to the root URL "/"
+/// Root route handler
+/// 
+/// This function will be called when a GET request is made to the root URL "/".
+/// 
+/// Returns:
+/// - A static string as a simple response
 #[get("/")]
 fn index() -> &'static str {
     "EHLIE???"
 }
 
-// The main function that sets up and runs our Rocket web server
+/// Main function to set up and run the Rocket web server
+/// 
+/// This function initializes the application state and builds the Rocket server.
+/// 
+/// Returns:
+/// - A Rocket instance configured with routes and state
 #[launch]
 async fn rocket() -> _ {
-    // Initialize the application state
     let state = initialize_app_state().await.expect("Failed to initialize app state");
-
-    // Build and launch the Rocket server
     rocket::build()
-        .manage(state)  // Make the AppState available to all routes
-        .mount("/", routes![index])  // Mount the index route
+        .manage(state)
+        .mount("/", routes![index, register, get_user, delete_user])
 }
 
-// Function to establish a connection to PostgreSQL
+/// Establish connection to PostgreSQL
+/// 
+/// This function creates a connection pool to the PostgreSQL database.
+/// 
+/// Parameters:
+/// - url: The connection URL for the PostgreSQL database
+/// 
+/// Returns:
+/// - Ok(PgPool): A successful connection pool
+/// - Err(sqlx::Error): An error if the connection fails
 async fn connect_to_postgres(url: &str) -> Result<PgPool, sqlx::Error> {
     let pool = PgPool::connect(url).await?;
     println!("Successfully connected to Postgres");
     Ok(pool)
 }
 
-// Function to establish a connection to MongoDB
+/// Establish connection to MongoDB
+/// 
+/// This function creates a connection to the MongoDB database.
+/// 
+/// Parameters:
+/// - uri: The connection URI for the MongoDB database
+/// 
+/// Returns:
+/// - Ok(mongodb::Database): A successful database connection
+/// - Err(mongodb::error::Error): An error if the connection fails
 async fn connect_to_mongodb(uri: &str) -> Result<mongodb::Database, mongodb::error::Error> {
-    // Parse the MongoDB connection string
     let client_options = ClientOptions::parse(uri).await?;
-    // Create a new client
     let client = MongoClient::with_options(client_options)?;
-    // Connect to a specific database
-    let db = client.database("eFantasy");  // Replace "eFantasy" with your actual database name
+    let db = client.database("eFantasy");
     println!("Successfully connected to MongoDB");
     Ok(db)
 }
 
-// Function to create a new HTTP client for Supabase
+/// Create a new HTTP client for Supabase
+/// 
+/// This function builds a new HTTP client for making requests to Supabase.
+/// 
+/// Returns:
+/// - Ok(Client): A successfully created HTTP client
+/// - Err(reqwest::Error): An error if client creation fails
 fn create_supabase_client() -> Result<Client, reqwest::Error> {
     let client = Client::builder().build()?;
     println!("Successfully created Supabase client");
     Ok(client)
 }
 
-// Function to initialize the entire application state
+/// Initialize the entire application state
+/// 
+/// This function sets up all necessary connections and resources for the application.
+/// 
+/// Returns:
+/// - Ok(AppState): A fully initialized application state
+/// - Err(Box<dyn std::error::Error>): An error if initialization fails
 async fn initialize_app_state() -> Result<AppState, Box<dyn std::error::Error>> {
-    // Load environment variables from a .env file if present
     dotenv().ok();
-
-    // Retrieve necessary environment variables
     let postgres_url = std::env::var("POSTGRES_DATABASE_URL")?;
     let supabase_api_key = std::env::var("SUPABASE_API_KEY")?;
     let mongodb_uri = std::env::var("MONGODB_URI")?;
 
-    // Attempt to connect to PostgreSQL
-    let db = match connect_to_postgres(&postgres_url).await {
-        Ok(pool) => pool,
-        Err(e) => {
-            println!("Failed to connect to Postgres: {}", e);
-            return Err(Box::new(e));
-        }
-    };
-
-    // Attempt to connect to MongoDB
-    let mongo_db = match connect_to_mongodb(&mongodb_uri).await {
-        Ok(db) => db,
-        Err(e) => {
-            println!("Failed to connect to MongoDB: {}", e);
-            return Err(Box::new(e));
-        }
-    };
-
-    // Attempt to create Supabase client
-    let supabase_client = match create_supabase_client() {
-        Ok(client) => client,
-        Err(e) => {
-            println!("Failed to create Supabase client: {}", e);
-            return Err(Box::new(e));
-        }
-    };
+    let db = connect_to_postgres(&postgres_url).await?;
+    let mongo_db = connect_to_mongodb(&mongodb_uri).await?;
+    let supabase_client = create_supabase_client()?;
 
     println!("All connections established successfully");
 
-    // Return the fully initialized AppState
     Ok(AppState {
         db,
         supabase_client,
