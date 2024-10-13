@@ -84,8 +84,8 @@ async fn connect_to_mongodb(uri: &str) -> Result<mongodb::Database, mongodb::err
     let client = MongoClient::with_options(client_options)?;
     let db = client.database(&db_name);
 
-    //Test
-    insert_pro_player(db).await;
+    // //Test
+    // insert_pro_player(db).await;
 
     let db = client.database(&db_name);
     println!("Successfully connected to MongoDB");

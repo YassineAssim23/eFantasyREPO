@@ -44,6 +44,26 @@ pub async fn get_user_by_id(pool: &PgPool, user_id: i64) -> Result<User, sqlx::E
     .await
 }
 
+///  Retrieve a user from the database by their username
+/// 
+///  This function selects a user from the 'users' table based on the provided username and returns the user.
+/// 
+///  Parameters:
+///  - pool: A reference to the database connection pool.
+///  - user_name: The username of the user to retrieve.
+/// 
+///  Returns:
+///  - Result<User, sqlx::Error>: The retrieved user or an error if the retrieval fails.
+pub async fn get_user_by_name(pool: &PgPool, user_name: &str) -> Result<User, sqlx::Error> {
+    sqlx::query_as!(
+        User,
+        "SELECT * FROM users WHERE username = $1",
+        user_name
+    )
+    .fetch_one(pool)
+    .await
+}
+
 ///  Delete a user from the database by their ID
 /// 
 ///  This function deletes a user from the 'users' table based on the provided ID and returns a boolean indicating success.

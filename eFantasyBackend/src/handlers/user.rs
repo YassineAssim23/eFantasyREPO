@@ -25,25 +25,25 @@ pub async fn register(state: &State<AppState>, new_user: Json<NewUser>) -> Resul
     }
 }
 
-/// Retrieve a user by their ID
-/// 
-/// This function handles GET requests to retrieve a user by their ID.
+/// Retrieve a user
+///
+/// This function handles GET requests to retrieve a new user based on ID or username.
 /// 
 /// Parameters:
 /// - state: A reference to the application state, which includes the database connection.
-/// - id: The ID of the user to retrieve.
+/// - id_or_name: id or username of user that will be retrieved
 /// 
 /// Returns:
-/// - Ok(Json<User>): If the user is successfully retrieved, returns the user data as JSON.
-/// - Err(Status::InternalServerError): If there's an error during the retrieval.
-#[get("/user/<id>")]
-pub async fn get_user(state: &State<AppState>, id: i64) -> Result<Json<User>, Status> {
-    match crate::db::user::get_user_by_id(&state.db, id).await {
-        Ok(user) => Ok(Json(user)),
-        Err(_) => Err(Status::NotFound)
-    }
-}   
-
+/// - Ok(Json<User>): If the user is successfully created, returns the user data as JSON.
+/// - Err(Status::InternalServerError): If there's an error during user creation.
+#[get("/user/<id_or_name>")]
+pub async fn get_user(state: &State<AppState>, id_or_name: &str) -> Result<Json<User>, Status> {
+    if let Ok(id) = id_or_name.parse::<i64>() {
+        crate::db::user::get_user_by_id(&state.db, id).await
+    } else {
+        crate::db::user::get_user_by_name(&state.db, id_or_name).await
+    }.map(Json).map_err(|_| Status::NotFound)
+}  
 /// Delete a user by their ID
 /// 
 /// This function handles DELETE requests to delete a user by their ID.
@@ -63,6 +63,7 @@ pub async fn delete_user(state: &State<AppState>, id: i64) -> Status {
         Err(_) => Status::InternalServerError
     }
 }
+
 
 
 
