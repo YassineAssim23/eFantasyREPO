@@ -9,7 +9,8 @@ mod models;
 mod handlers;
 mod db;
 use crate::handlers::user::{register, get_user, delete_user};
-use crate::handlers::pro::{insert_pro_player};
+use crate::db::pro::{test_insert_pro_player};
+use crate::handlers::pro::{get_pro_player};
 
 /// Main application state
 /// 
@@ -49,7 +50,7 @@ async fn rocket() -> _ {
     let state = initialize_app_state().await.expect("Failed to initialize app state");
     rocket::build()
         .manage(state)
-        .mount("/", routes![index, register, get_user, delete_user])
+        .mount("/", routes![index, register, get_user, delete_user, get_pro_player])
 }
 
 /// Establish connection to PostgreSQL
@@ -87,7 +88,6 @@ async fn connect_to_mongodb(uri: &str) -> Result<mongodb::Database, mongodb::err
     // //Test
     // insert_pro_player(db).await;
 
-    let db = client.database(&db_name);
     println!("Successfully connected to MongoDB");
     Ok(db)
 }

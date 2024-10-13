@@ -1,18 +1,24 @@
-use reqwest::Client;
-use mongodb::{Client as MongoClient, options::ClientOptions, Collection };
+use rocket::State;
 use crate::AppState;
-use crate::models::pro::Pro_Player;
+use crate::models::pro::ProPlayer;
+use rocket::serde::json::Json;
+use rocket::http::Status;
 
-/// Test function to insert a pro player into mongoDB
-pub async fn insert_pro_player(db: mongodb::Database) {
-
-    let coll: Collection<Pro_Player> = db.collection("pro_players");
-
-    let pro = Pro_Player {
-        gamertag: "Faker".to_string(),
-        team: "T1".to_string(),
-    };
-    println!("test");
-    let res = coll.insert_one(pro).await;
-    println!("Inserted a pro with _id: {}", res.unwrap().inserted_id);
-}
+/// Retrieve a pro player by their ID
+/// 
+/// This function handles GET requests to retrieve a pro player by their ID.
+/// 
+/// Parameters:
+/// - state: A reference to the application state, which includes the database connection.
+/// - id: The ID of the pro to retrieve.
+/// 
+/// Returns:
+/// - Ok(Json<User>): If the pro is successfully retrieved, returns the pro players data as JSON.
+/// - Err(Status::InternalServerError): If there's an error during the retrieval.
+#[get("/pro/<id>")]
+pub async fn get_pro_player(state: &State<AppState>, id: String) -> Result<Json<ProPlayer>, Status> {
+    match crate::db::pro::get_pro_player_by_id(&state.mongo_db, id).await {
+        Ok(pro) => Ok(Json(pro)),
+        Err(_) => Err(Status::NotFound)
+    }
+}   

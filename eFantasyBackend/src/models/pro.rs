@@ -5,7 +5,7 @@ use serde::{ Deserialize, Serialize};
 ///     - gamertag: A Players current gamertag
 ///     - team: A players current team
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Pro_Player 
+pub struct ProPlayer 
 {
     pub gamertag: String,
     pub team: String,
