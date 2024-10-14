@@ -19,6 +19,7 @@ pub struct ProPlayer {
     pub position: Option<String>,
 
     /// Number of games played by the player.
+    #[serde(rename = "Games")]
     pub games: Option<String>,
 
     /// The player's win rate, represented as a percentage string.
@@ -26,6 +27,7 @@ pub struct ProPlayer {
     pub win_rate: Option<String>,
 
     /// Kill/Death/Assist ratio of the player.
+    #[serde(rename = "KDA")]
     pub kda: Option<String>,
 
     /// Average number of kills per game.
@@ -41,9 +43,11 @@ pub struct ProPlayer {
     pub avg_assists: Option<String>,
 
     /// Creep Score per Minute, indicating farming efficiency.
+    #[serde(rename = "CSM")]
     pub csm: Option<String>,
 
     /// Gold Per Minute, indicating the player's economic impact.
+    #[serde(rename = "GPM")]
     pub gpm: Option<String>,
 
     /// Kill Participation percentage, showing involvement in team fights.
@@ -55,9 +59,11 @@ pub struct ProPlayer {
     pub dmg_percentage: Option<String>,
 
     /// Damage Per Minute, showing the player's damage output over time.
+    #[serde(rename = "DPM")]
     pub dpm: Option<String>,
 
     /// Vision Score Per Minute, indicating the player's contribution to team vision.
+    #[serde(rename = "VSPM")]
     pub vspm: Option<String>,
 
     /// Average Wards Placed per Minute.
