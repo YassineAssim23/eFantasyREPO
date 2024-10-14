@@ -8,6 +8,8 @@ use mongodb::{Client as MongoClient, options::ClientOptions};
 mod models;
 mod handlers;
 mod db;
+mod errors;
+
 use crate::handlers::user::{register, get_user, delete_user};
 use crate::handlers::pro::{get_pro_player};
 
@@ -38,6 +40,11 @@ fn index() -> &'static str {
     "EHLIE???"
 }
 
+#[catch(409)]
+fn conflict_catcher() -> &'static str {
+    "Username or email already exists!"
+}
+
 /// Main function to set up and run the Rocket web server
 /// 
 /// This function initializes the application state and builds the Rocket server.
@@ -50,6 +57,7 @@ async fn rocket() -> _ {
     rocket::build()
         .manage(state)
         .mount("/", routes![index, register, get_user, delete_user, get_pro_player])
+        .register("/", catchers![conflict_catcher])
 }
 
 /// Establish connection to PostgreSQL

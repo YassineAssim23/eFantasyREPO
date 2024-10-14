@@ -2,8 +2,10 @@ use rocket::State;
 use crate::AppState;
 use crate::models::user::NewUser;
 use crate::models::User;
+use crate::errors::UserError;
 use rocket::serde::json::Json;
 use rocket::http::Status;
+
 // use rocket::request::FromParam;
 
 /// Register a new user
@@ -18,10 +20,10 @@ use rocket::http::Status;
 /// - Ok(Json<User>): If the user is successfully created, returns the user data as JSON.
 /// - Err(Status::InternalServerError): If there's an error during user creation.
 #[post("/register", data = "<new_user>")]
-pub async fn register(state: &State<AppState>, new_user: Json<NewUser>) -> Result<Json<User>, Status> {
+pub async fn register(state: &State<AppState>, new_user: Json<NewUser>) -> Result<Json<User>, UserError> {
     match crate::db::user::create_user(&state.db, new_user.into_inner()).await {
         Ok(user) => Ok(Json(user)),
-        Err(_) => Err(Status::InternalServerError)
+        Err(e) => Err(e),
     }
 }
 
@@ -37,13 +39,15 @@ pub async fn register(state: &State<AppState>, new_user: Json<NewUser>) -> Resul
 /// - Ok(Json<User>): If the user is successfully created, returns the user data as JSON.
 /// - Err(Status::InternalServerError): If there's an error during user creation.
 #[get("/user/<id_or_name>")]
-pub async fn get_user(state: &State<AppState>, id_or_name: &str) -> Result<Json<User>, Status> {
-    if let Ok(id) = id_or_name.parse::<i64>() {
+pub async fn get_user(state: &State<AppState>, id_or_name: &str) -> Result<Json<User>, UserError> {
+    let result = if let Ok(id) = id_or_name.parse::<i64>() {
         crate::db::user::get_user_by_id(&state.db, id).await
     } else {
         crate::db::user::get_user_by_name(&state.db, id_or_name).await
-    }.map(Json).map_err(|_| Status::NotFound)
-}  
+    };
+
+    result.map(Json)
+}
 /// Delete a user by their ID
 /// 
 /// This function handles DELETE requests to delete a user by their ID.

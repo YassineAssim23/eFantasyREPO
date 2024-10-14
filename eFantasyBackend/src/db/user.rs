@@ -1,6 +1,7 @@
 use sqlx::PgPool;
 use crate::models::User;
 use crate::models::user::NewUser;
+use crate::errors::UserError;
 
 ///  Create a new user in the database
 /// 
@@ -12,7 +13,22 @@ use crate::models::user::NewUser;
 /// 
 ///  Returns:
 ///  - Result<User, sqlx::Error>: The created user or an error if the insertion fails.
-pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, sqlx::Error> {
+pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, UserError> {
+    let user_exists = sqlx::query!(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 OR email = $2) as exists",
+        user.username,
+        user.email
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(UserError::DatabaseError)?
+    .exists
+    .unwrap_or(false);
+
+    if user_exists {
+        return Err(UserError::AlreadyExists);
+    }
+
     sqlx::query_as!(
         User,
         "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
@@ -22,6 +38,7 @@ pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, sqlx::Err
     )
     .fetch_one(pool)
     .await
+    .map_err(UserError::DatabaseError)
 }
 
 ///  Retrieve a user from the database by their ID
@@ -34,7 +51,7 @@ pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, sqlx::Err
 /// 
 ///  Returns:
 ///  - Result<User, sqlx::Error>: The retrieved user or an error if the retrieval fails.
-pub async fn get_user_by_id(pool: &PgPool, user_id: i64) -> Result<User, sqlx::Error> {
+pub async fn get_user_by_id(pool: &PgPool, user_id: i64) -> Result<User, UserError> {
     sqlx::query_as!(
         User,
         "SELECT * FROM users WHERE id = $1",
@@ -42,8 +59,11 @@ pub async fn get_user_by_id(pool: &PgPool, user_id: i64) -> Result<User, sqlx::E
     )
     .fetch_one(pool)
     .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => UserError::NotFound,
+        _ => UserError::DatabaseError(e),
+    })
 }
-
 ///  Retrieve a user from the database by their username
 /// 
 ///  This function selects a user from the 'users' table based on the provided username and returns the user.
@@ -54,7 +74,7 @@ pub async fn get_user_by_id(pool: &PgPool, user_id: i64) -> Result<User, sqlx::E
 /// 
 ///  Returns:
 ///  - Result<User, sqlx::Error>: The retrieved user or an error if the retrieval fails.
-pub async fn get_user_by_name(pool: &PgPool, user_name: &str) -> Result<User, sqlx::Error> {
+pub async fn get_user_by_name(pool: &PgPool, user_name: &str) -> Result<User, UserError> {
     sqlx::query_as!(
         User,
         "SELECT * FROM users WHERE username = $1",
@@ -62,6 +82,10 @@ pub async fn get_user_by_name(pool: &PgPool, user_name: &str) -> Result<User, sq
     )
     .fetch_one(pool)
     .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => UserError::NotFound,
+        _ => UserError::DatabaseError(e),
+    })
 }
 
 ///  Delete a user from the database by their ID
