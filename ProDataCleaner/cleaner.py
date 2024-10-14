@@ -5,7 +5,7 @@ inFile = open("test.txt", "r")
 outFile = open("out.json", "w")
 
 x = {}
-
+print("hello")
 i = 0
 with inFile and outFile:
     for line in inFile:
