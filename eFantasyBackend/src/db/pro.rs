@@ -2,40 +2,41 @@ use mongodb::{Client as MongoClient, Collection};
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use crate::models::pro::ProPlayer;
 
-/// Test function to insert a pro player into mongoDB
-pub async fn test_insert_pro_player(db: mongodb::Database) {
+/// Retrieves a pro player from the database by their ID.
+///
+/// This function connects to the MongoDB database, finds the collection
+/// specified by the MONGODB_PRO_PLAYER_COLLECTION environment variable,
+/// and attempts to retrieve a document with the given ID.
+///
+/// # Arguments
+///
+/// * `db` - A reference to the MongoDB database
+/// * `pro_id` - A string slice containing the MongoDB ObjectId of the pro player
+///
+/// # Returns
+///
+/// * `Ok(ProPlayer)` if the player is found
+/// * `Err(String)` if there's an error (e.g., player not found, database error)
+pub async fn get_pro_player_by_id(db: &mongodb::Database, pro_id: &str) -> Result<ProPlayer, String> {
+    // Retrieve the collection name from environment variables
+    let collection_name = std::env::var("MONGODB_PRO_PLAYER_COLLECTION")
+        .map_err(|_| "MONGODB_PRO_PLAYER_COLLECTION environment variable not set".to_string())?;
+    
+    println!("Accessing collection: {}", collection_name);
 
-    let coll: Collection<ProPlayer> = db.collection("pro_players");
+    // Get a handle to the pro players collection
+    let collection: Collection<ProPlayer> = db.collection(&collection_name);
 
-    let pro = ProPlayer {
-        gamertag: "Faker".to_string(),
-        team: "T1".to_string(),
-    };
-    println!("test");
-    let res = coll.insert_one(pro).await;
-    println!("Inserted a pro with _id: {}", res.unwrap().inserted_id);
-}
+    // Parse the provided ID string into a MongoDB ObjectId
+    let object_id = ObjectId::parse_str(pro_id)
+        .map_err(|_| "Invalid ObjectId format".to_string())?;
 
-///  Retrieve a pro player from the Mongo database by their pro_id
-/// 
-///  This function gets a pro from the pro_players collection based on the requested pro_id and returns the pro player
-/// 
-///  Parameters:
-///  - pro_id: An int that refers to a pro's ObjectID
-///  - client: The MongoDB Client
-/// 
-///  Returns:
-///  - Result<ProPlayer, Error(Confirm this)>: The pulled pro or an error from MongoDB.
-pub async fn get_pro_player_by_id(db: &mongodb::Database, pro_id: String) -> Result<ProPlayer, mongodb::error::Error> {
-    let collection: Collection<ProPlayer> = db.collection(&std::env::var("MONGODB_PRO_PLAYER_COLLECTION").unwrap());
+    // Attempt to find the document with the given ID
+    let result = collection.find_one(doc! { "_id": object_id }).await
+        .map_err(|e| format!("Database error: {}", e))?;
+    
+    println!("Query result: {:?}", result);
 
-    let _id = ObjectId::parse_str(pro_id).unwrap();
-
-    let result = collection.find_one(
-        doc! { "_id": _id }
-    ).await?;
-
-    println!("{:#?}", result);
-
-    Ok(result.unwrap())
+    // If the document is found, return it; otherwise, return an error
+    result.ok_or_else(|| "Pro player not found".to_string())
 }

@@ -9,7 +9,6 @@ mod models;
 mod handlers;
 mod db;
 use crate::handlers::user::{register, get_user, delete_user};
-use crate::db::pro::{test_insert_pro_player};
 use crate::handlers::pro::{get_pro_player};
 
 /// Main application state
