@@ -2,7 +2,6 @@ use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey}
 use serde::{Serialize, Deserialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use argon2::{self};
-use crate::errors;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2
@@ -37,7 +36,7 @@ pub fn generate_token(user_id: i64) -> Result<String, String> {
     let expiration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs() + 24 * 3600;
+        .as_secs() + 3600; // 1 hour expiration
 
     let claims = Claims {
         sub: user_id.to_string(),
@@ -49,12 +48,24 @@ pub fn generate_token(user_id: i64) -> Result<String, String> {
 }
 
 pub fn validate_token(token: &str) -> Result<i64, jsonwebtoken::errors::Error> {
+    println!("Validating token: {}", token);
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    let token_data = decode::<Claims>(
+    if token.len() < 10 {  // Arbitrary minimum length
+        println!("Token too short, likely invalid");
+        return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken));
+    }
+    let token_data = match decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::default(),
-    )?;
+    ) {
+        Ok(data) => data,
+        Err(e) => {
+            println!("Token validation error: {:?}", e);
+            return Err(e);
+        }
+    };
 
+    println!("Token validated successfully");
     Ok(token_data.claims.sub.parse().unwrap())
 }

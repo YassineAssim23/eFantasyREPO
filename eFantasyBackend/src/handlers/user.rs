@@ -7,12 +7,11 @@ use rocket::serde::json::Json;
 use rocket::http::Status;
 use crate::models::user::LoginCredentials;
 use crate::auth::verify_password;
-use jsonwebtoken::errors::Error;
-
+use crate::guards::NoAuthGuard;
 // use rocket::request::FromParam;
 
 #[post("/login", data = "<credentials>")]
-pub async fn login(state: &State<AppState>, credentials: Json<LoginCredentials>) -> Result<Json<String>, Status> {
+pub async fn login(_guard: NoAuthGuard, state: &State<AppState>, credentials: Json<LoginCredentials>) -> Result<Json<String>, Status> {
     let user = crate::db::user::get_user_by_name(&state.db, &credentials.username)
         .await
         .map_err(|_| Status::Unauthorized)?;
@@ -41,11 +40,18 @@ pub async fn login(state: &State<AppState>, credentials: Json<LoginCredentials>)
 /// - Ok(Json<User>): If the user is successfully created, returns the user data as JSON.
 /// - Err(Status::InternalServerError): If there's an error during user creation.
 #[post("/register", data = "<new_user>")]
-pub async fn register(state: &State<AppState>, new_user: Json<NewUser>) -> Result<Json<User>, UserError> {
+pub async fn register(_guard: NoAuthGuard, state: &State<AppState>, new_user: Json<NewUser>) -> Result<Json<User>, UserError> {
     match crate::db::user::create_user(&state.db, new_user.into_inner()).await {
         Ok(user) => Ok(Json(user)),
         Err(e) => Err(e),
     }
+}
+
+#[post("/signout")]
+pub async fn sign_out(_auth: AuthGuard) -> Status {
+    // We don't need to do anything server-side since we're using JWTs
+    // The client will handle removing the token
+    Status::Ok
 }
 
 /// Retrieve a user
@@ -88,8 +94,5 @@ pub async fn delete_user(state: &State<AppState>, id: i64) -> Status {
         Err(_) => Status::InternalServerError
     }
 }
-
-
-
 
 

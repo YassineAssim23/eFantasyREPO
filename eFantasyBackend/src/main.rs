@@ -10,9 +10,9 @@ mod handlers;
 mod db;
 mod errors;
 mod auth;
+mod guards;
 
-
-use crate::handlers::user::{register, get_user, delete_user, login};
+use crate::handlers::user::{register, get_user, delete_user, login, sign_out};
 use crate::handlers::pro::{get_pro_player};
 /// Main application state
 /// 
@@ -58,16 +58,10 @@ async fn rocket() -> _ {
         Ok(_) => println!("Successfully loaded .env file"),
         Err(e) => println!("Failed to load .env file: {:?}", e),
     }
-
-    println!("All environment variables:");
-    for (key, value) in std::env::vars() {
-        println!("{}: {}", key, value);
-    }
     let state = initialize_app_state().await.expect("Failed to initialize app state");
-    println!("JWT_SECRET: {}", std::env::var("JWT_SECRET").unwrap_or_else(|_| "Not set".to_string()));
     rocket::build()
         .manage(state)
-        .mount("/", routes![index, register, get_user, delete_user, get_pro_player, login])
+        .mount("/", routes![index, register, get_user, delete_user, get_pro_player, login, sign_out])
         .register("/", catchers![conflict_catcher])
 }
 
