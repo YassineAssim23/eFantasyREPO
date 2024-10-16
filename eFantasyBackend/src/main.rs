@@ -9,10 +9,11 @@ mod models;
 mod handlers;
 mod db;
 mod errors;
+mod auth;
 
-use crate::handlers::user::{register, get_user, delete_user};
+
+use crate::handlers::user::{register, get_user, delete_user, login};
 use crate::handlers::pro::{get_pro_player};
-
 /// Main application state
 /// 
 /// This struct holds all shared resources that our web server will use.
@@ -53,10 +54,20 @@ fn conflict_catcher() -> &'static str {
 /// - A Rocket instance configured with routes and state
 #[launch]
 async fn rocket() -> _ {
+    match dotenv() {
+        Ok(_) => println!("Successfully loaded .env file"),
+        Err(e) => println!("Failed to load .env file: {:?}", e),
+    }
+
+    println!("All environment variables:");
+    for (key, value) in std::env::vars() {
+        println!("{}: {}", key, value);
+    }
     let state = initialize_app_state().await.expect("Failed to initialize app state");
+    println!("JWT_SECRET: {}", std::env::var("JWT_SECRET").unwrap_or_else(|_| "Not set".to_string()));
     rocket::build()
         .manage(state)
-        .mount("/", routes![index, register, get_user, delete_user, get_pro_player])
+        .mount("/", routes![index, register, get_user, delete_user, get_pro_player, login])
         .register("/", catchers![conflict_catcher])
 }
 

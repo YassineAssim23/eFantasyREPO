@@ -5,9 +5,30 @@ use crate::models::User;
 use crate::errors::UserError;
 use rocket::serde::json::Json;
 use rocket::http::Status;
+use crate::models::user::LoginCredentials;
+use crate::auth::verify_password;
+use jsonwebtoken::errors::Error;
 
 // use rocket::request::FromParam;
 
+#[post("/login", data = "<credentials>")]
+pub async fn login(state: &State<AppState>, credentials: Json<LoginCredentials>) -> Result<Json<String>, Status> {
+    let user = crate::db::user::get_user_by_name(&state.db, &credentials.username)
+        .await
+        .map_err(|_| Status::Unauthorized)?;
+
+    if verify_password(&credentials.password, &user.password) {
+        match crate::auth::generate_token(user.id) {
+            Ok(token) => Ok(Json(token)),
+            Err(e) => {
+                eprintln!("Token generation error: {}", e);
+                Err(Status::InternalServerError)
+            }
+        }
+    } else {
+        Err(Status::Unauthorized)
+    }
+}
 /// Register a new user
 ///
 /// This function handles POST requests to create a new user.

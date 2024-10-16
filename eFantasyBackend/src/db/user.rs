@@ -14,6 +14,7 @@ use crate::errors::UserError;
 ///  Returns:
 ///  - Result<User, sqlx::Error>: The created user or an error if the insertion fails.
 pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, UserError> {
+    
     let user_exists = sqlx::query!(
         "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 OR email = $2) as exists",
         user.username,
@@ -28,13 +29,14 @@ pub async fn create_user(pool: &PgPool, user: NewUser) -> Result<User, UserError
     if user_exists {
         return Err(UserError::AlreadyExists);
     }
-
+    
+    let hashed_password = crate::auth::hash_password(&user.password);
     sqlx::query_as!(
         User,
         "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
         user.username,
         user.email,
-        user.password
+        hashed_password
     )
     .fetch_one(pool)
     .await
