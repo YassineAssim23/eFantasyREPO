@@ -8,6 +8,7 @@ use rocket::http::Status;
 use crate::models::user::LoginCredentials;
 use crate::auth::verify_password;
 use crate::guards::NoAuthGuard;
+use crate::guards::AuthGuard;
 // use rocket::request::FromParam;
 
 #[post("/login", data = "<credentials>")]
