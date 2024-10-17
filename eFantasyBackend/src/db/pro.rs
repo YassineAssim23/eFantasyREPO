@@ -1,5 +1,5 @@
-use mongodb::{Client as MongoClient, Collection};
-use mongodb::bson::{doc, oid::ObjectId, Document};
+use mongodb::Collection;
+use mongodb::bson::{doc, oid::ObjectId};
 use crate::models::pro::ProPlayer;
 
 /// Retrieves a pro player from the database by their ID.
