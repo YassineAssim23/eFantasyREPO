@@ -4,6 +4,7 @@ use rocket::request::Request;
 use rocket::response::{self, Responder, status};
 use jsonwebtoken;
 
+/// Custom error types for user-related operations
 #[derive(Error, Debug)]
 pub enum UserError {
     #[error("Username or email already exists")]

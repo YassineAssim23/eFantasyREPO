@@ -1,29 +1,29 @@
 use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
 use serde::{Serialize, Deserialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use argon2::{self};
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2
-};
+use argon2::{self, password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString}, Argon2};
 
+/// JWT claims structure
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String,
     exp: usize,
 }
 
+/// Hashes a password using Argon2
 pub fn hash_password(password: &str) -> String {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     argon2.hash_password(password.as_bytes(), &salt).unwrap().to_string()
 }
 
+/// Verifies a password against its hash
 pub fn verify_password(password: &str, hash: &str) -> bool {
     let parsed_hash = PasswordHash::new(hash).unwrap();
     Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok()
 }
 
+/// Generates a JWT token for a user
 pub fn generate_token(user_id: i64) -> Result<String, String> {
     let secret = match std::env::var("JWT_SECRET") {
         Ok(s) => s,
@@ -47,25 +47,16 @@ pub fn generate_token(user_id: i64) -> Result<String, String> {
         .map_err(|e| format!("Token generation failed: {:?}", e))
 }
 
+/// Validates a JWT token
 pub fn validate_token(token: &str) -> Result<i64, jsonwebtoken::errors::Error> {
-    println!("Validating token: {}", token);
+    println!("auth::validate_token: Validating token");
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    if token.len() < 10 {  // Arbitrary minimum length
-        println!("Token too short, likely invalid");
-        return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken));
-    }
-    let token_data = match decode::<Claims>(
+    let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::default(),
-    ) {
-        Ok(data) => data,
-        Err(e) => {
-            println!("Token validation error: {:?}", e);
-            return Err(e);
-        }
-    };
+    )?;
 
-    println!("Token validated successfully");
+    println!("auth::validate_token: Token validated successfully");
     Ok(token_data.claims.sub.parse().unwrap())
 }
