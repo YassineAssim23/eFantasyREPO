@@ -57,6 +57,12 @@ pub enum LeagueError {
      NotInLeague,
      #[error("Cannot leave league: you are the last member")]
     LastMember,
+    #[error("User is not authorized to perform this action")]
+    NotAuthorized,
+    #[error("Cannot add new participants through settings update")]
+    CannotAddParticipants,
+    #[error("Cannot remove all participants from the league")]
+    NoParticipantsLeft,
 }
 
 /// Implement Responder for LeagueError to allow it to be returned directly from route handlers
@@ -70,6 +76,9 @@ impl<'r> rocket::response::Responder<'r, 'static> for LeagueError {
             LeagueError::DraftAlreadyStarted => (Status::BadRequest, "Cannot leave. Season has already begun."),
             LeagueError::NotInLeague => (Status::BadRequest, "User not in league."),
             LeagueError::LastMember => (Status::BadRequest, "Cannot leave league: you are the last member"),
+            LeagueError::NotAuthorized => (Status::Forbidden, "User is not authorized to perform this action"),
+            LeagueError::CannotAddParticipants => (Status::BadRequest, "Cannot add new users without valid invitation"),
+            LeagueError::NoParticipantsLeft => (Status::BadRequest, "Cannot remove all participants from the league. Please delete the league to remove all participants."),
         };
         // Return a custom error response
         status::Custom(status, Json(json!({

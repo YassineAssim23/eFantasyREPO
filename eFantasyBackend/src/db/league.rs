@@ -1,7 +1,10 @@
 use sqlx::PgPool;
 use crate::models::league::{League, NewLeague};
+use crate::models::league::UpdateLeague;
 use crate::errors::LeagueError;
 use chrono::Utc;
+use std::collections::HashSet;
+
 
 /// Creates a new league in the database
 ///
@@ -183,7 +186,7 @@ pub async fn leave_league(pool: &PgPool, league_id: i64, user_id: i64) -> Result
         return Err(LeagueError::NotInLeague);
     }
 
-    let mut new_participants: Vec<i64> = league.participants.iter().filter(|&&id| id != user_id).cloned().collect();
+    let new_participants: Vec<i64> = league.participants.iter().filter(|&&id| id != user_id).cloned().collect();
     let mut new_admin_id = league.admin_id;
 
     // If the leaving user is the admin, assign a new admin
@@ -211,4 +214,169 @@ pub async fn leave_league(pool: &PgPool, league_id: i64, user_id: i64) -> Result
     transaction.commit().await.map_err(LeagueError::DatabaseError)?;
 
     Ok(updated_league)
+}
+
+
+/// Updates league settings
+///
+/// # Parameters
+/// - `pool`: A reference to the database connection pool
+/// - `league_id`: The ID of the league to update
+/// - `admin_id`: The ID of the user attempting to update the league
+/// - `update_league`: The new settings for the league
+///
+/// # Returns
+/// - `Result<League, LeagueError>`: The updated League if successful, or a LeagueError if the operation fails
+///
+/// # Errors
+/// This function will return an error if:
+/// - The league is not found
+/// - The user is not the admin of the league
+/// - The draft has already started
+/// - There's a database error
+pub async fn update_league_settings(pool: &PgPool, league_id: i64, admin_id: i64, update_league: UpdateLeague) -> Result<League, LeagueError> {
+    let mut transaction = pool.begin().await.map_err(LeagueError::DatabaseError)?;
+
+    // Fetch the current league
+    let current_league = sqlx::query_as!(
+        League,
+        "SELECT * FROM leagues WHERE id = $1",
+        league_id
+    )
+    .fetch_one(&mut transaction)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => LeagueError::NotFound,
+        _ => LeagueError::DatabaseError(e),
+    })?;
+
+    // Check if the user is the admin
+    if current_league.admin_id != admin_id {
+        return Err(LeagueError::NotAuthorized);
+    }
+
+    // Check if the draft has already started
+    if Utc::now() > current_league.draft_time {
+        return Err(LeagueError::DraftAlreadyStarted);
+    }
+
+    // Ensure we're only removing participants, not adding new ones
+    let current_participants: HashSet<i64> = current_league.participants.into_iter().collect();
+    let new_participants: HashSet<i64> = update_league.participants.into_iter().collect();
+
+    if !new_participants.is_subset(&current_participants) {
+        return Err(LeagueError::CannotAddParticipants);
+    }
+
+    let final_participants: Vec<i64> = new_participants.into_iter().collect();
+
+    if final_participants.is_empty() {
+        return Err(LeagueError::NoParticipantsLeft);
+    }
+
+    // Check if admin is removing themselves
+    let new_admin_id = if final_participants.contains(&admin_id) {
+        admin_id
+    } else {
+        *final_participants.first().unwrap()
+    };
+
+    // If admin is removing themselves, they can't update other settings
+    let (name, max_teams, is_public, draft_time, scoring_type) = if new_admin_id != admin_id {
+        (
+            current_league.name,
+            current_league.max_teams,
+            current_league.is_public,
+            current_league.draft_time,
+            current_league.scoring_type,
+        )
+    } else {
+        (
+            update_league.name,
+            update_league.max_teams,
+            update_league.is_public,
+            update_league.draft_time,
+            update_league.scoring_type,
+        )
+    };
+
+    // Update the league
+    let updated_league = sqlx::query_as!(
+        League,
+        r#"
+        UPDATE leagues
+        SET name = $1, max_teams = $2, is_public = $3, draft_time = $4, scoring_type = $5, participants = $6, admin_id = $7
+        WHERE id = $8
+        RETURNING *
+        "#,
+        name,
+        max_teams,
+        is_public,
+        draft_time,
+        scoring_type,
+        &final_participants,
+        new_admin_id,
+        league_id
+    )
+    .fetch_one(&mut transaction)
+    .await
+    .map_err(LeagueError::DatabaseError)?;
+
+    transaction.commit().await.map_err(LeagueError::DatabaseError)?;
+
+    Ok(updated_league)
+}
+
+
+/// Deletes a league from the database
+///
+/// # Parameters
+/// - `pool`: A reference to the database connection pool
+/// - `league_id`: The ID of the league to delete
+/// - `admin_id`: The ID of the user attempting to delete the league
+///
+/// # Returns
+/// - `Result<(), LeagueError>`: Ok(()) if successful, or a LeagueError if the operation fails
+///
+/// # Errors
+/// This function will return an error if:
+/// - The league is not found
+/// - The user is not the admin of the league
+/// - The draft has already started
+/// - There's a database error
+pub async fn delete_league(pool: &PgPool, league_id: i64, admin_id: i64) -> Result<(), LeagueError> {
+    let mut transaction = pool.begin().await.map_err(LeagueError::DatabaseError)?;
+
+    // Fetch the league
+    let league = sqlx::query_as!(
+        League,
+        "SELECT * FROM leagues WHERE id = $1",
+        league_id
+    )
+    .fetch_one(&mut transaction)
+    .await
+    .map_err(|e| match e{
+        sqlx::Error::RowNotFound => LeagueError::NotFound,
+        _ => LeagueError::DatabaseError(e),
+    })?;
+
+    // Check if user is the admin
+    if league.admin_id != admin_id{
+        return Err(LeagueError::NotAuthorized);
+    }
+
+    // Check if the draft has already started
+    if Utc::now() > league.draft_time {
+        return Err(LeagueError::DraftAlreadyStarted);
+    }
+
+    // Delete the league
+    sqlx::query!("DELETE FROM leagues WHERE id = $1", league_id)
+        .execute(&mut transaction)
+        .await
+        .map_err(LeagueError::DatabaseError)?;
+    
+    transaction.commit().await.map_err(LeagueError::DatabaseError)?;
+
+    Ok(())
 }

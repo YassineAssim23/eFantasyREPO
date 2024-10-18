@@ -42,3 +42,14 @@ pub struct NewLeague {
     /// Type of scoring system to be used in the new league
     pub scoring_type: String,
 }
+
+/// Represents the data required to update a league
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateLeague {
+    pub name: String,
+    pub max_teams: i32,
+    pub is_public: bool,
+    pub draft_time: DateTime<Utc>,
+    pub scoring_type: String,
+    pub participants: Vec<i64>,
+}
