@@ -34,20 +34,34 @@ impl<'r> Responder<'r, 'static> for UserError {
     }
 }
 
-/// Represents errors that can occur during league operations
+/// Represents possible errors that can occur during league operations
 #[derive(Error, Debug)]
 pub enum LeagueError {
+    /// The requested league was not found in the database
     #[error("League not found")]
     NotFound,
+
+    /// An error occurred while interacting with the database
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
+
+    /// The user is already a participant in the league
+    #[error("User is already in the league")]
+    AlreadyJoined,
+
+    /// The league has reached its maximum number of participants
+    #[error("League is full")]
+    LeagueFull,
 }
+
 /// Implement Responder for LeagueError to allow it to be returned directly from route handlers
 impl<'r> rocket::response::Responder<'r, 'static> for LeagueError {
     fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
         let (status, error_message) = match self {
             LeagueError::NotFound => (Status::NotFound, "League not found"),
             LeagueError::DatabaseError(_) => (Status::InternalServerError, "Database error"),
+            LeagueError::AlreadyJoined => (Status::BadRequest, "User is already in the league"),
+            LeagueError::LeagueFull => (Status::BadRequest, "League is full"),
         };
         // Return a custom error response
         status::Custom(status, Json(json!({
