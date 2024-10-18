@@ -51,3 +51,20 @@ pub async fn get_public_leagues(state: &State<AppState>) -> Result<Json<Vec<Leag
     println!("Returning {} public leagues", leagues.len());
     Ok(Json(leagues))
 }
+
+/// Handler for leaving a league
+///
+/// # Parameters
+/// - `state`: The shared application state
+/// - `league_id`: The ID of the league to leave
+/// - `auth`: The authenticated user information
+///
+/// # Returns
+/// - `Result<Json<League>, LeagueError>`: The updated League as JSON if successful, or a LeagueError if the operation fails
+#[post("/leagues/<league_id>/leave")]
+pub async fn leave_league(state: &State<AppState>, league_id: i64, auth: AuthGuard) -> Result<Json<League>, LeagueError> {
+    println!("Handling leave_league request: league_id={}, user_id={}", league_id, auth.user_id);
+    let league = crate::db::league::leave_league(&state.db, league_id, auth.user_id).await?;
+    println!("Leave league successful: {:?}", league);
+    Ok(Json(league))
+}

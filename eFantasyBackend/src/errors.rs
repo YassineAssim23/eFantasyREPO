@@ -40,18 +40,23 @@ pub enum LeagueError {
     /// The requested league was not found in the database
     #[error("League not found")]
     NotFound,
-
     /// An error occurred while interacting with the database
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
-
     /// The user is already a participant in the league
     #[error("User is already in the league")]
     AlreadyJoined,
-
     /// The league has reached its maximum number of participants
     #[error("League is full")]
     LeagueFull,
+     /// The user is already a participant in the league
+     #[error("Cannot leave. Season has already begun.")]
+     DraftAlreadyStarted,
+     /// The league has reached its maximum number of participants
+     #[error("User not in league")]
+     NotInLeague,
+     #[error("Cannot leave league: you are the last member")]
+    LastMember,
 }
 
 /// Implement Responder for LeagueError to allow it to be returned directly from route handlers
@@ -62,6 +67,9 @@ impl<'r> rocket::response::Responder<'r, 'static> for LeagueError {
             LeagueError::DatabaseError(_) => (Status::InternalServerError, "Database error"),
             LeagueError::AlreadyJoined => (Status::BadRequest, "User is already in the league"),
             LeagueError::LeagueFull => (Status::BadRequest, "League is full"),
+            LeagueError::DraftAlreadyStarted => (Status::BadRequest, "Cannot leave. Season has already begun."),
+            LeagueError::NotInLeague => (Status::BadRequest, "User not in league."),
+            LeagueError::LastMember => (Status::BadRequest, "Cannot leave league: you are the last member"),
         };
         // Return a custom error response
         status::Custom(status, Json(json!({

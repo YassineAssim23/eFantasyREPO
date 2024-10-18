@@ -1,6 +1,7 @@
 use sqlx::PgPool;
 use crate::models::league::{League, NewLeague};
 use crate::errors::LeagueError;
+use chrono::Utc;
 
 /// Creates a new league in the database
 ///
@@ -138,4 +139,76 @@ pub async fn get_public_leagues(pool: &PgPool) -> Result<Vec<League>, LeagueErro
                  league.id, league.name, league.is_public, league.participants);
     }
     Ok(leagues)
+}
+
+/// Attempts to remove a user from a league
+///
+/// # Parameters
+/// - `pool`: A reference to the database connection pool
+/// - `league_id`: The ID of the league the user is trying to leave
+/// - `user_id`: The ID of the user trying to leave the league
+///
+/// # Returns
+/// - `Result<League, LeagueError>`: The updated League if successful, or a LeagueError if the operation fails
+///
+/// # Errors
+/// This function will return an error if:
+/// - The league is not found
+/// - The user is not in the league
+/// - The draft has already started
+/// - There's a database error
+pub async fn leave_league(pool: &PgPool, league_id: i64, user_id: i64) -> Result<League, LeagueError> {
+    let mut transaction = pool.begin().await.map_err(LeagueError::DatabaseError)?;
+
+    // Fetch the league
+    let league = sqlx::query_as!(
+        League,
+        "SELECT * FROM leagues WHERE id = $1",
+        league_id
+    )
+    .fetch_one(&mut transaction)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => LeagueError::NotFound,
+        _ => LeagueError::DatabaseError(e),
+    })?;
+
+    // Check if the draft has already started
+    if Utc::now() > league.draft_time {
+        return Err(LeagueError::DraftAlreadyStarted);
+    }
+
+    // Check if the user is in the league
+    if !league.participants.contains(&user_id) {
+        return Err(LeagueError::NotInLeague);
+    }
+
+    let mut new_participants: Vec<i64> = league.participants.iter().filter(|&&id| id != user_id).cloned().collect();
+    let mut new_admin_id = league.admin_id;
+
+    // If the leaving user is the admin, assign a new admin
+    if user_id == league.admin_id {
+        new_admin_id = new_participants.first().cloned().ok_or(LeagueError::LastMember)?;
+    }
+
+    // Update the league
+    let updated_league = sqlx::query_as!(
+        League,
+        r#"
+        UPDATE leagues
+        SET participants = $1, admin_id = $2
+        WHERE id = $3
+        RETURNING *
+        "#,
+        &new_participants,
+        new_admin_id,
+        league_id
+    )
+    .fetch_one(&mut transaction)
+    .await
+    .map_err(LeagueError::DatabaseError)?;
+
+    transaction.commit().await.map_err(LeagueError::DatabaseError)?;
+
+    Ok(updated_league)
 }
