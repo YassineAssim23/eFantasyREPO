@@ -1,33 +1,30 @@
 import json
 import re
+from bson import ObjectId
 
 inFile = open("test.txt", "r")
-outFile = open("out.json", "w")
+outFile = open("../PlayerDataJSON/top_players.json", "w")
 
-x = {}
-print("hello")
+x = {"players" : []}
+
 i = 0
 with inFile and outFile:
     for line in inFile:
         if i == 0:
             headers = re.split(r'\t', line.replace('\n', ''))
-            
             print(headers)
         else:
             lineArr = re.split(r'\t', line)
-            x["name"] = lineArr[0]
-            x["country"] = lineArr[1]
-            x["data"] = {}
-            for j in range(2, len(headers), 1):
-                x["data"][headers[j]] = lineArr[j].replace('\n', '')
+            tempMap = {}
+            tempMap["_id"] = str(ObjectId())
+            for j in range(len(headers)):
+                tempMap[headers[j]] = lineArr[j].replace('\n', '')
+            x["players"].append(tempMap)
             if i == 1:
                 print(x)
-                outFile.write("[")
-            temp = json.dumps(x, indent=4)
-            
-            outFile.write(temp)
-            outFile.write(',')
-            outFile.write("\n")
         i += 1
 
-    outFile.write("]")
+    temp = json.dumps(x, indent=4)
+    outFile.write(temp)
+    outFile.write(',\n')
+    outFile.write("\"curr_index\" : 0")

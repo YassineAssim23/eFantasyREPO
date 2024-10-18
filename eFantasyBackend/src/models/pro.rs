@@ -3,19 +3,22 @@ use mongodb::bson::oid::ObjectId;
 
 /// Represents a professional player in esports with their statistics and attributes.
 /// All fields are optional to accommodate varying data availability across different players.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProPlayer {
     /// MongoDB's unique identifier for the document.
     #[serde(rename = "_id")]
-    pub id: ObjectId,
+    pub id: Option<ObjectId>,
 
     /// The player's in-game name or alias.
+    #[serde(rename = "Player")]
     pub name: Option<String>,
 
     /// The player's country of origin, typically represented by a country code.
+    #[serde(rename = "Country")]
     pub country: Option<String>,
 
     /// The player's role or position in the game (e.g., "TOP", "MID", "ADC").
+    #[serde(rename = "Position")]
     pub position: Option<String>,
 
     /// Number of games played by the player.
@@ -101,4 +104,31 @@ pub struct ProPlayer {
     /// Number of Pentakills (killing all 5 enemy champions) achieved.
     #[serde(rename = "Penta Kills")]
     pub penta_kills: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InsertResponse {
+    pub inserted_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ProPlayerVec {
+    players: Vec<ProPlayer>,
+    curr_index: usize,
+}
+
+impl Iterator for ProPlayerVec {
+    type Item = ProPlayer;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        
+        if self.curr_index < self.players.len() {
+            let curr_player = self.players[self.curr_index].clone();
+            self.curr_index += 1;
+            Some(curr_player)
+        } else {
+            None
+        }
+        
+    }
 }

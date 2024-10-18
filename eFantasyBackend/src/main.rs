@@ -13,7 +13,7 @@ mod auth;
 mod guards;
 
 use crate::handlers::user::{register, get_user, delete_user, login, sign_out, complete_profile, get_user_profile, update_user_profile, get_user_stats};
-use crate::handlers::pro::{get_pro_player};
+use crate::handlers::pro::{get_pro_player_by_id, insert_players_route};
 
 /// Main application state
 pub struct AppState {
@@ -49,13 +49,14 @@ async fn rocket() -> _ {
             register, 
             get_user, 
             delete_user, 
-            get_pro_player, 
+            get_pro_player_by_id, 
             login, 
             sign_out,  
             complete_profile,
             get_user_profile,
             update_user_profile,
             get_user_stats,
+            insert_players_route,
         ])
         .register("/", catchers![conflict_catcher])
 }
