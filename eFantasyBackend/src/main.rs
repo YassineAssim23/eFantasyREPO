@@ -4,7 +4,11 @@ use sqlx::postgres::PgPool;
 use dotenv::dotenv;
 use reqwest::Client;
 use mongodb::{Client as MongoClient, options::ClientOptions};
-use chrono::{DateTime, Utc};
+
+use crate::handlers::user::{register, get_user, delete_user, login, sign_out, complete_profile, get_user_profile, update_user_profile, get_user_stats};
+use crate::handlers::pro::{get_pro_player};
+use crate::handlers::league::create_league;
+
 mod models;
 mod handlers;
 mod db;
@@ -12,8 +16,6 @@ mod errors;
 mod auth;
 mod guards;
 
-use crate::handlers::user::{register, get_user, delete_user, login, sign_out, complete_profile, get_user_profile, update_user_profile, get_user_stats};
-use crate::handlers::pro::{get_pro_player};
 
 /// Main application state
 pub struct AppState {
@@ -56,6 +58,7 @@ async fn rocket() -> _ {
             get_user_profile,
             update_user_profile,
             get_user_stats,
+            create_league,
         ])
         .register("/", catchers![conflict_catcher])
 }
