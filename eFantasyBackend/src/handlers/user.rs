@@ -78,14 +78,13 @@ pub async fn get_user_profile(state: &State<AppState>, id: i64, _auth: AuthGuard
 }
 
 /// Updates a user's profile
-#[put("/user/<id>/profile", data = "<profile_update>")]
+#[put("/user/profile", data = "<profile_update>")]
 pub async fn update_user_profile(
     state: &State<AppState>,
-    id: i64, 
     profile_update: Json<UserProfileUpdate>, 
-    _auth: AuthGuard
+    auth: AuthGuard
 ) -> Result<Json<User>, UserError> {
-    let updated_user = crate::db::user::update_user_profile(&state.db, id, profile_update.into_inner()).await?;
+    let updated_user = crate::db::user::update_user_profile(&state.db, auth.user_id, profile_update.into_inner()).await?;
     Ok(Json(updated_user))
 }
 
