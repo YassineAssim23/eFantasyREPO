@@ -7,7 +7,7 @@ use mongodb::{Client as MongoClient, options::ClientOptions};
 
 use crate::handlers::user::{register, get_user, delete_user, login, sign_out, complete_profile, get_user_profile, update_user_profile, get_user_stats};
 use crate::handlers::pro::{get_pro_player};
-use crate::handlers::league::{create_league, get_public_leagues, join_league, leave_league, update_league_settings, delete_league};
+use crate::handlers::league::{create_league, get_public_leagues, join_league, leave_league, update_league_settings, delete_league, create_league_invitation, accept_league_invitation, decline_league_invitation, get_pending_league_invitations, get_my_leagues};
 
 mod models;
 mod handlers;
@@ -63,7 +63,12 @@ async fn rocket() -> _ {
             get_public_leagues,
             leave_league,
             delete_league,
-            update_league_settings
+            update_league_settings,
+            create_league_invitation,
+            accept_league_invitation,
+            decline_league_invitation,
+            get_pending_league_invitations,
+            get_my_leagues
         ])
         .register("/", catchers![conflict_catcher])
 }

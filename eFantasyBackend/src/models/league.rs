@@ -53,3 +53,31 @@ pub struct UpdateLeague {
     pub scoring_type: String,
     pub participants: Vec<i64>,
 }
+
+/// Represents an invitation to join a private league
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct LeagueInvitation {
+    /// Unique identifier for the invitation
+    pub id: i64,
+    /// ID of the league the invitation is for
+    pub league_id: i64,
+    /// ID of the user being invited
+    pub invitee_id: i64,
+    /// ID of the user sending the invitation
+    pub inviter_id: i64,
+    /// Current status of the invitation (e.g., "pending", "accepted", "declined")
+    pub status: String,
+    /// Timestamp of when the invitation was created
+    pub created_at: DateTime<Utc>,
+    /// Timestamp of when the invitation was last updated
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Represents the data required to create a new league invitation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewLeagueInvitation {
+    /// ID of the league the invitation is for
+    pub league_id: i64,
+    /// ID of the user being invited
+    pub invitee_id: i64,
+}

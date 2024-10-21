@@ -63,6 +63,12 @@ pub enum LeagueError {
     CannotAddParticipants,
     #[error("Cannot remove all participants from the league")]
     NoParticipantsLeft,
+    #[error("League is public")]
+    LeagueIsPublic,
+    #[error("Invitation is not pending")]
+    InvitationNotPending,
+    #[error("Invitation not found")]
+    InvitationNotFound,
 }
 
 /// Implement Responder for LeagueError to allow it to be returned directly from route handlers
@@ -79,6 +85,9 @@ impl<'r> rocket::response::Responder<'r, 'static> for LeagueError {
             LeagueError::NotAuthorized => (Status::Forbidden, "User is not authorized to perform this action"),
             LeagueError::CannotAddParticipants => (Status::BadRequest, "Cannot add new users without valid invitation"),
             LeagueError::NoParticipantsLeft => (Status::BadRequest, "Cannot remove all participants from the league. Please delete the league to remove all participants."),
+            LeagueError::LeagueIsPublic => (Status::BadRequest, "League is public"),
+            LeagueError::InvitationNotPending => (Status::BadRequest, "Invitation is not pending"),
+            LeagueError::InvitationNotFound => (Status::BadRequest, "Invitation not found"),
         };
         // Return a custom error response
         status::Custom(status, Json(json!({
