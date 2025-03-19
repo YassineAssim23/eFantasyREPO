@@ -1,21 +1,46 @@
 # eFantasy
-A full-stack fantasy sports application built with Rust and React.
+A full-stack fantasy esports platform built with Rust and React, featuring real-time player statistics and league management.
 
 ## Key Features
-- User authentication and profile management
-- RESTful API using Rocket.rs framework
-- PostgreSQL database integration with SQLx
-- Secure password hashing and JWT token authentication
-- User statistics tracking and profile updates
+- User System:
+  * JWT-based authentication with Argon2 password hashing
+  * Profile management and statistics tracking
+  * Custom guards for route protection
+
+- League Management:
+  * Create and manage fantasy leagues
+  * Custom scoring systems
+  * Draft scheduling and team management
+  * Public/private league options
+
+- Pro Player Integration:
+  * MongoDB integration for pro player statistics
+  * Real-time player data updates
+  * Comprehensive player statistics tracking (KDA, CS, vision scores, etc.)
+  * Data pipeline for importing esports statistics
 
 ## Technical Stack
-- Backend: Rust (Rocket.rs, SQLx)
-- Database: PostgreSQL
-- Authentication: JWT tokens
-- API: RESTful endpoints for user management
+Backend:
+- Rust with Rocket.rs framework
+- PostgreSQL with SQLx for user/league data
+- MongoDB for pro player statistics
+- JWT for authentication
+- Custom error handling system
 
-## Notable Implementations
-- Custom user authentication system
-- Profile completion and updates
-- User statistics tracking (wins/losses/points)
-- Database error handling and input validation
+Data Processing:
+- Python scripts for data transformation
+- ETL pipeline for player statistics
+- Custom data validation and normalization
+
+## Architecture
+- RESTful API with structured error handling
+- Multi-database architecture (SQL + NoSQL)
+- Custom guards for route protection
+- Comprehensive error types and handling
+- Environment-based configuration
+
+## Development Status
+Currently implementing:
+- League draft system
+- Real-time statistics updates
+- Enhanced data validation
